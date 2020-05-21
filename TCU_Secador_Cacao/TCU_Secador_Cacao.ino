@@ -113,3 +113,29 @@ byte edit(byte x, byte y, byte parameter){
   }
 }
  
+void DS3231_display(){
+  // Convert BCD to decimal
+  second = (second >> 4) * 10 + (second & 0x0F);
+  minute = (minute >> 4) * 10 + (minute & 0x0F);
+  hour   = (hour >> 4)   * 10 + (hour & 0x0F);
+  date   = (date >> 4)   * 10 + (date & 0x0F);
+  month  = (month >> 4)  * 10 + (month & 0x0F);
+  year   = (year >> 4)   * 10 + (year & 0x0F);
+  // End conversion
+  Time[7]     = second % 10 + 48;
+  Time[6]     = second / 10 + 48;
+  Time[4]      = minute % 10 + 48;
+  Time[3]      = minute / 10 + 48;
+  Time[1]      = hour   % 10 + 48;
+  Time[0]      = hour   / 10 + 48;
+  Calendar[9] = year   % 10 + 48;
+  Calendar[8] = year   / 10 + 48;
+  Calendar[4]  = month  % 10 + 48;
+  Calendar[3]  = month  / 10 + 48;
+  Calendar[1]  = date   % 10 + 48;
+  Calendar[0]  = date   / 10 + 48;
+  lcd.setCursor(5, 0);
+  lcd.print(Time);                               // Display time
+  lcd.setCursor(5, 1);
+  lcd.print(Calendar);                           // Display calendar
+}
