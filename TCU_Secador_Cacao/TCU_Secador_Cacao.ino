@@ -1,6 +1,6 @@
 #include <SPI.h>              // SPI library (needed for the SD card)
 #include <SD.h>               // SD library
-#include <LiquidCrystal.h>    // LCD library code
+#include <LiquidCrystal_I2C.h>   // LCD library code
 #include <Wire.h>             // Wire library code (needed for I2C protocol devices)
 #include <DHT.h>              // DHT library code
 
@@ -10,8 +10,7 @@
 #define DHTTYPE DHT22         // DHT22 sensor is used
 DHT dht(DHTPIN, DHTTYPE);     // Initialize DHT library
 
-// LCD module connections (RS, E, D4, D5, D6, D7)
-LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
+LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 File dataLog;
 
