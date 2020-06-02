@@ -25,7 +25,7 @@ byte i, second, minute, hour, date, month, year, previous_second;
 int Temp, RH;
  
 void setup() {
-  lcd.init();                      // initialize the lcd 
+  //lcd.init();                      // initialize the lcd 
   // Print a message to the LCD.
   lcd.backlight();
   // Open serial communications and wait for port to open:
