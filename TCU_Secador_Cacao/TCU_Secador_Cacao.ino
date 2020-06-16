@@ -36,7 +36,8 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 const int BUTTON =A0;
 int BUTTONstate = 0;
 int buttonACTION =0;
-int i,j,k;
+int i,k;
+int j=0;
 int posicion=0;    // necesaria para la clave
 int cursor=5;      // posicion inicial de la clave en el LCD
 int clave=0;       // para el LCD
@@ -103,16 +104,14 @@ void setup(){
 
 
 void loop(){
+
   now = rtc.now();
   
   usuario();
-  if(j == 4){
+  if(j == 2){
   microSD();
   }
-  if(k == 4){
-  Serial.println("hola");
-  }
-  //microSD();
+  
     
   
 
@@ -178,7 +177,7 @@ String stringTime1 = "";
     
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  File dataLog = SD.open("final24.txt", FILE_WRITE);
+  File dataLog = SD.open("final.txt", FILE_WRITE);
   
   // if the file is available, write to it:
   if (dataLog) {
@@ -224,11 +223,7 @@ void  usuario(){
           posicion ++; // aumentamos posicion si es correcto el digito
 
       if (posicion == 4){ // comprobamos que se han introducido los 4 correctamente
-         if (key == '#' ){ // comprobamos tecla y estado
-            
-             Serial.println("kkkk");
-                
-             }
+         
          digitalWrite (13,HIGH);  // encendemos LED
          lcd.setCursor(0,0);      // situamos el cursor el la pos 0 de la linea 0.
          lcd.print("Usuario Correcto? ");
@@ -289,10 +284,9 @@ void  usuario(){
      }
  if (key == '#' )
      { // comprobamos tecla y estado
-       
-     k==4;
+      j==2;
      Serial.println("Iniciando proceso de secado");
-        
+       Serial.println(j);
      }
 
  //--- Condicionales para resetear clave introducida -------------
