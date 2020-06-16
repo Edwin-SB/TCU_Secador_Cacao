@@ -9,20 +9,19 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Keypad.h>
+
 DHT dht(DHTPIN, DHTTYPE);
 DateTime now;
 char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-
- float t,h,f;
-const int chipSelect = 10;
-
 RTC_DS3231 rtc;
 LiquidCrystal_I2C lcd(0x27,20,4);
 
 const byte ROWS = 4; //four rows
 const byte COLS = 4; //three columns
 const int LED =13;
+const int chipSelect = 10;
+
+float t,h,f;
 char keys[ROWS][COLS] = {
   {'1','2','3'},
   {'4','5','6'},
@@ -36,6 +35,8 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 const int BUTTON =A0;
 int BUTTONstate = 0;
+int buttonACTION =0;
+ int i;
 
 
 void setup()
@@ -121,6 +122,7 @@ void loop()
   Serial.print(t);
   Serial.println(" *C");
   Serial.print("  ");
+
   
 
 
@@ -129,22 +131,24 @@ void loop()
   
 }//loop
 
+
 void microSD(){
 
   BUTTONstate = digitalRead(BUTTON);
-  
+  char key = keypad.getKey();// lee lo que se introcice en el teclado
   String stringTime1 = "";
   stringTime1 += now.hour();
   stringTime1 += ":";
   stringTime1 += now.minute();
   stringTime1 += ":";
   stringTime1 += now.second();
-  
-  if (BUTTONstate == HIGH){
-  char key = keypad.getKey();// lee lo que se introcice en el teclado 
-    String stringUser = "";
+
+  String stringUser = "";
     stringUser += key;
     stringUser += ".txt";
+  
+   
+    
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
   File dataLog = SD.open(stringUser, FILE_WRITE);
@@ -164,8 +168,8 @@ void microSD(){
         dataLog.println(t);
         dataLog.close();  
     // print to the serial port too: 
-  }
- }
+  }// if datolog
+ 
   // if the file isn't open, pop up an error:
   else {
     Serial.println("error opening datalog.txt");
