@@ -36,7 +36,7 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 const int BUTTON =A0;
 int BUTTONstate = 0;
 int buttonACTION =0;
-int i,j;
+int i,j,k;
 int posicion=0;    // necesaria para la clave
 int cursor=5;      // posicion inicial de la clave en el LCD
 int clave=0;       // para el LCD
@@ -104,9 +104,16 @@ void setup(){
 
 void loop(){
   now = rtc.now();
+  
   usuario();
+  if(j == 4){
   microSD();
-    // Wait a few seconds between measurements.
+  }
+  if(k == 4){
+  Serial.println("hola");
+  }
+  //microSD();
+    
   
 
   // Reading temperature or humidity takes about 250 milliseconds!
@@ -151,7 +158,7 @@ void stream(){
   }//stream
 
 void microSD(){
-  if(j == 4){
+  
   delay(2000);
   stream();
   BUTTONstate = digitalRead(BUTTON);
@@ -171,7 +178,7 @@ String stringTime1 = "";
     
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  File dataLog = SD.open("final.txt", FILE_WRITE);
+  File dataLog = SD.open("final24.txt", FILE_WRITE);
   
   // if the file is available, write to it:
   if (dataLog) {
@@ -186,7 +193,7 @@ String stringTime1 = "";
         dataLog.print("Humedad");
         dataLog.print(",");
         dataLog.println(t);
-        dataLog.close();  
+        dataLog.close(); 
     // print to the serial port too: 
   }// if datolog
  
@@ -194,7 +201,7 @@ String stringTime1 = "";
   else {
     Serial.println("error opening datalog.txt");
   }
- }
+ 
 }//microsd
 
 void  usuario(){
@@ -203,8 +210,9 @@ void  usuario(){
         { // descartamos almohadilla y asterisco
           if (key != '#' && key != '*' && clave==0){
             lcd.print(key); // imprimimos pulsacion
+             Serial.print(" ");
              Serial.print(key);
-             j++;
+             
              cursor++;             // incrementamos el cursor
              tone(buzzer,350);     // tono de pulsacion
              delay(200);
@@ -216,11 +224,18 @@ void  usuario(){
           posicion ++; // aumentamos posicion si es correcto el digito
 
       if (posicion == 4){ // comprobamos que se han introducido los 4 correctamente
-         microSD();
+         if (key == '#' ){ // comprobamos tecla y estado
+            
+             Serial.println("kkkk");
+                
+             }
          digitalWrite (13,HIGH);  // encendemos LED
          lcd.setCursor(0,0);      // situamos el cursor el la pos 0 de la linea 0.
-         lcd.print("Clave correcta ");
-         Serial.print("Clave correcta ");// escribimos en LCD
+         lcd.print("Usuario Correcto? ");
+         Serial.println(" ");
+         Serial.println("Usuario Correcto?  ");// escribimos en LCD
+         Serial.println("SI(#)  NO(*)");
+         
          delay(200);                           // tono de clave correcta
          tone(buzzer,500);
          delay(100);
@@ -231,13 +246,16 @@ void  usuario(){
          tone(buzzer,800);
          delay(100);
          noTone(buzzer);
-
+         
+                
          lcd.setCursor(5,1); // cursor en la posicion 5, linea 1
          clave=1; // indicamos que se ha introducido la clave
          digitalWrite(ledRojo,LOW); // apagamos el LED rojo
          digitalWrite(ledVerde, HIGH); // encendemos el verde
          
      }
+    
+     
      //--- En el caso de que este incompleta o no hayamos acertado ----------
      if(cursor>8)        // comprobamos que no pase de la cuarta posicion
        {   cursor=5;     // lo volvemos a colocar al inicio
@@ -264,24 +282,33 @@ void  usuario(){
 
  if (key == '#' && luz==1)
      { // comprobamos tecla y estado
+       
        lcd.noBacklight(); // apagamos
        luz=0; // indicamos que esta apagada
+        
+     }
+ if (key == '#' )
+     { // comprobamos tecla y estado
+       
+     k==4;
+     Serial.println("Iniciando proceso de secado");
+        
      }
 
  //--- Condicionales para resetear clave introducida -------------
- if (key == '*')
-     { // asterisco para resetear el contador
+ if (key == '*'){ // asterisco para resetear el contador
+       
        posicion = 0;
        cursor = 5;
        clave=0;
        posicion=0;
        lcd.setCursor(0,0); // situamos el cursor el la posición 2 de la linea 0.
        lcd.print("Introduzca clave"); 
-       Serial.print("Introduzca clave");// escribimos en LCD
+       Serial.println("Introduzca clave");// escribimos en LCD
        lcd.setCursor(5,1);
        lcd.print(" "); // borramos de la pantalla los numeros
        lcd.setCursor(5,1);
-    
+       
        digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
        digitalWrite(ledVerde, LOW); // apagamos el verde
     }
