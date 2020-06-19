@@ -20,6 +20,7 @@ const byte ROWS = 4; //four rows
 const byte COLS = 4; //three columns
 const int LED =13;
 const int chipSelect = 10;
+const int BUTTON =A0;
 
 float t,h,f;
 char keys[ROWS][COLS] = {
@@ -33,11 +34,12 @@ byte colPins[COLS] = {6, 8, 4};    //connect to the column pinouts of the keypad
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
 
-const int BUTTON =A0;
+
 int BUTTONstate = 0;
 int buttonACTION =0;
-int i,k;
-int j=0;
+int i,j;
+int k = 0;
+
 int posicion=0;    // necesaria para la clave
 int cursor=5;      // posicion inicial de la clave en el LCD
 int clave=0;       // para el LCD
@@ -104,17 +106,21 @@ void setup(){
 
 
 void loop(){
-
+  BUTTONstate = digitalRead(BUTTON);
   now = rtc.now();
   
-  usuario();
-  if(j == 2){
-  microSD();
-  }
-  
-    
-  
 
+  usuario();
+  
+}//loop
+
+
+void microSD(){
+   
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;}
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
@@ -122,21 +128,8 @@ void loop(){
   float t = dht.readTemperature();
   // Read temperature as Fahrenheit
   float f = dht.readTemperature(true);
-  
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
-
-  
-  
-  
-
-  
-}//loop
-
-void stream(){
+  char key = keypad.getKey();// lee lo que se introcice en el teclado
+  delay(2000);
   String stringTime1 = "";
   stringTime1 += now.hour();
   stringTime1 += ":";
@@ -154,21 +147,7 @@ void stream(){
   Serial.print(t);
   Serial.println(" *C");
   Serial.print("  ");
-  }//stream
-
-void microSD(){
   
-  delay(2000);
-  stream();
-  BUTTONstate = digitalRead(BUTTON);
-  char key = keypad.getKey();// lee lo que se introcice en el teclado
-  
-String stringTime1 = "";
-  stringTime1 += now.hour();
-  stringTime1 += ":";
-  stringTime1 += now.minute();
-  stringTime1 += ":";
-  stringTime1 += now.second();
   String stringUser = "";
     stringUser += key;
     stringUser += ".txt";
@@ -177,7 +156,7 @@ String stringTime1 = "";
     
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  File dataLog = SD.open("final.txt", FILE_WRITE);
+  File dataLog = SD.open("final3.txt", FILE_WRITE);
   
   // if the file is available, write to it:
   if (dataLog) {
@@ -204,14 +183,13 @@ String stringTime1 = "";
 }//microsd
 
 void  usuario(){
-  char key = keypad.getKey();// lee lo que se introcice en el teclado
-      if (key != 0) //Si el valor es 0 es que no se ha pulsado ninguna tecla
+  
+  char pulsacion = keypad.getKey(); // leemos pulsacion
+      if (pulsacion != 0) //Si el valor es 0 es que no se ha pulsado ninguna tecla
         { // descartamos almohadilla y asterisco
-          if (key != '#' && key != '*' && clave==0){
-            lcd.print(key); // imprimimos pulsacion
-             Serial.print(" ");
-             Serial.print(key);
-             
+          if (pulsacion != '#' && pulsacion != '*' && clave==0){
+            lcd.print(pulsacion); // imprimimos pulsacion
+             Serial.print(pulsacion);
              cursor++;             // incrementamos el cursor
              tone(buzzer,350);     // tono de pulsacion
              delay(200);
@@ -222,15 +200,14 @@ void  usuario(){
       
           posicion ++; // aumentamos posicion si es correcto el digito
 
-      if (posicion == 4){ // comprobamos que se han introducido los 4 correctamente
-         
+      if (posicion == 4)
+       { // comprobamos que se han introducido los 4 correctamente
          digitalWrite (13,HIGH);  // encendemos LED
          lcd.setCursor(0,0);      // situamos el cursor el la pos 0 de la linea 0.
          lcd.print("Usuario Correcto? ");
-         Serial.println(" ");
-         Serial.println("Usuario Correcto?  ");// escribimos en LCD
-         Serial.println("SI(#)  NO(*)");
-         
+         Serial.println("  ");
+         Serial.println("Usuario Correcto? ");// escribimos en LCD
+         Serial.println("SI(1) NO(*)");
          delay(200);                           // tono de clave correcta
          tone(buzzer,500);
          delay(100);
@@ -241,16 +218,12 @@ void  usuario(){
          tone(buzzer,800);
          delay(100);
          noTone(buzzer);
-         
-                
+
          lcd.setCursor(5,1); // cursor en la posicion 5, linea 1
          clave=1; // indicamos que se ha introducido la clave
          digitalWrite(ledRojo,LOW); // apagamos el LED rojo
          digitalWrite(ledVerde, HIGH); // encendemos el verde
-         
      }
-    
-     
      //--- En el caso de que este incompleta o no hayamos acertado ----------
      if(cursor>8)        // comprobamos que no pase de la cuarta posicion
        {   cursor=5;     // lo volvemos a colocar al inicio
@@ -268,30 +241,22 @@ void  usuario(){
    } 
 
  //--- Condicionales para encender o apagar el LCD --------------
- if (key == '#' && luz==0)
+ if (pulsacion == '#' && luz==0)
      { // comprobamos tecla y encendemos si esta apagado
        lcd.backlight(); // encendemos
        luz=1; // indicamos que esta encendida
-       key =0; // borramos el valor para poder leer el siguiente condicional
+       pulsacion =0; // borramos el valor para poder leer el siguiente condicional
      }
 
- if (key == '#' && luz==1)
+ if (pulsacion == '#' && luz==1)
      { // comprobamos tecla y estado
-       
        lcd.noBacklight(); // apagamos
        luz=0; // indicamos que esta apagada
-        
-     }
- if (key == '#' )
-     { // comprobamos tecla y estado
-      j==2;
-     Serial.println("Iniciando proceso de secado");
-       Serial.println(j);
      }
 
  //--- Condicionales para resetear clave introducida -------------
- if (key == '*'){ // asterisco para resetear el contador
-       
+ if (pulsacion == '*')
+     { // asterisco para resetear el contador
        posicion = 0;
        cursor = 5;
        clave=0;
@@ -302,8 +267,10 @@ void  usuario(){
        lcd.setCursor(5,1);
        lcd.print(" "); // borramos de la pantalla los numeros
        lcd.setCursor(5,1);
-       
+    
        digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
        digitalWrite(ledVerde, LOW); // apagamos el verde
     }
+    
+    
   }//usuario
