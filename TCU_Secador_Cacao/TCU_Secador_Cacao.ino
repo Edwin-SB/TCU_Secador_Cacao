@@ -106,11 +106,36 @@ void setup(){
 
 
 void loop(){
-  BUTTONstate = digitalRead(BUTTON);
-  now = rtc.now();
   
+  char pulsacion = keypad.getKey(); // leemos pulsacion
+  now = rtc.now();
+   
 
+  switch(pulsacion){ // asterisco para resetear el contador
+  case '*':
+       posicion = 0;
+       cursor = 5;
+       clave=0;
+       posicion=0;
+       lcd.setCursor(0,0); // situamos el cursor el la posición 2 de la linea 0.
+       lcd.print("Introduzca clave"); 
+       Serial.println("Introduzca clave");// escribimos en LCD
+       lcd.setCursor(5,1);
+       lcd.print(" "); // borramos de la pantalla los numeros
+       lcd.setCursor(5,1);
+    
+       digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
+       digitalWrite(ledVerde, LOW); // apagamos el verde
+       break;
+   case '#':
+        microSD(); // Es la funcion encargada de escribir en la microSD todos los datos 
+        break;
+    
+    }
+
+  
   usuario();
+  //microSD();
   
 }//loop
 
@@ -207,7 +232,7 @@ void  usuario(){
          lcd.print("Usuario Correcto? ");
          Serial.println("  ");
          Serial.println("Usuario Correcto? ");// escribimos en LCD
-         Serial.println("SI(1) NO(*)");
+         Serial.println("SI(#) NO(*)");
          delay(200);                           // tono de clave correcta
          tone(buzzer,500);
          delay(100);
@@ -255,8 +280,8 @@ void  usuario(){
      }
 
  //--- Condicionales para resetear clave introducida -------------
- if (pulsacion == '*')
-     { // asterisco para resetear el contador
+ switch(pulsacion){ // asterisco para resetear el contador
+  case '*':
        posicion = 0;
        cursor = 5;
        clave=0;
@@ -270,6 +295,11 @@ void  usuario(){
     
        digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
        digitalWrite(ledVerde, LOW); // apagamos el verde
+       break;
+   case '#':
+        microSD();
+        break;
+    
     }
     
     
