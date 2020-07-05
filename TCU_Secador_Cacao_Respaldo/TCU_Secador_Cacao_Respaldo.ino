@@ -137,7 +137,7 @@ void loop(){
     }*/
 
   
-  usuario();
+  //usuario();
   //microSD();
   
 }//loop
