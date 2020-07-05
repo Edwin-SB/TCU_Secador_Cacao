@@ -48,7 +48,7 @@ int tiempo=0;      // para el LCD
 int ledVerde=11;   // pin para el LED verde
 int ledRojo=12;    // pin para el LED rojo
 int buzzer=10;     // pin altavoz
-
+char Lastkey;
 
 void setup(){ 
   
@@ -106,105 +106,119 @@ void setup(){
 
 
 void loop(){
-  
-  char pulsacion = keypad.getKey(); // leemos pulsacion
-  now = rtc.now();
-   
 
-  switch(pulsacion){ // asterisco para resetear el contador
-  case '*':
-       posicion = 0;
-       cursor = 5;
-       clave=0;
-       posicion=0;
-       lcd.setCursor(0,0); // situamos el cursor el la posición 2 de la linea 0.
-       lcd.print("Introduzca clave"); 
-       Serial.println("Introduzca clave");// escribimos en LCD
-       lcd.setCursor(5,1);
-       lcd.print(" "); // borramos de la pantalla los numeros
-       lcd.setCursor(5,1);
-    
-       digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
-       digitalWrite(ledVerde, LOW); // apagamos el verde
-       break;
-   case '#':
-        microSD(); // Es la funcion encargada de escribir en la microSD todos los datos 
-        break;
-    
-    }
+  Lastkey = keypad.getKey(); // leemos pulsacion
+  //Serial.println(Lastkey);
+  if(Lastkey !=NO_KEY){
+    switch(Lastkey){ // asterisco para resetear el contador
+      case '*':
+           Serial.println("Edwin apreto *");// escribimos en LCD
+           break;
+           
+      case '#':  
+            
+            
+            while( Lastkey == '#'){
+            Lastkey = keypad.getKey(); // leemos pulsacion
+            if(Lastkey == NO_KEY){
+             Lastkey = '#';
+            }
+            //microSD();
+            Serial.println("Edwin apreto #");// escribimos en LCD
+            }
+          
+            
+            break;
+            
+      case '3':
+            Serial.println("Edwin apreto 3");
+            break;
+      default:
+        Serial.println(Lastkey);
+      }  
+  }
+  Serial.print(Lastkey);
+  
 
-  
-  usuario();
-  //microSD();
-  
+    
+/*
+  String stringUser = "";
+    stringUser += Lastkey;
+    stringUser += ".csv"; */
+    
 }//loop
 
 
 void microSD(){
+  
    
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f)) {
     Serial.println("Failed to read from DHT sensor!");
     return;}
+    
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius
-  float t = dht.readTemperature();
-  // Read temperature as Fahrenheit
-  float f = dht.readTemperature(true);
-  char key = keypad.getKey();// lee lo que se introcice en el teclado
-  delay(2000);
   String stringTime1 = "";
-  stringTime1 += now.hour();
-  stringTime1 += ":";
-  stringTime1 += now.minute();
-  stringTime1 += ":";
-  stringTime1 += now.second();
-  Serial.print("Hora: "); 
-  Serial.print(stringTime1);
-  Serial.print("  ");
-  Serial.print("Humidity: "); 
-  Serial.print(h);
-  Serial.print(" %");
-  Serial.print("  ");
-  Serial.print("Temperature: "); 
-  Serial.print(t);
-  Serial.println(" *C");
-  Serial.print("  ");
-  
-  String stringUser = "";
-    stringUser += key;
-    stringUser += ".txt";
-  
-   
-    
+  float h;
+    // Read temperature as Celsius
+  float t;
+    // Read temperature as Fahrenheit
+  float f;
+ 
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  File dataLog = SD.open("final3.txt", FILE_WRITE);
+  File dataLog = SD.open("final20.csv", FILE_WRITE);
+  Serial.print(" Llegamos ");
   
   // if the file is available, write to it:
-  if (dataLog) {
-        dataLog.print("Hora");
-        dataLog.print(",");
-        dataLog.print(stringTime1);
-        dataLog.print(",");
-        dataLog.print("Temperatura");
-        dataLog.print(",");
-        dataLog.print(t);
-        dataLog.print(",");
-        dataLog.print("Humedad");
-        dataLog.print(",");
-        dataLog.println(t);
-        dataLog.close(); 
-    // print to the serial port too: 
-  }// if datolog
- 
-  // if the file isn't open, pop up an error:
-  else {
+  
+    now = rtc.now();
+    stringTime1 = "";
+    stringTime1 += now.hour();
+    stringTime1 += ":";
+    stringTime1 += now.minute();
+    stringTime1 += ":";
+    stringTime1 += now.second();
+    
+    h = dht.readHumidity();
+    // Read temperature as Celsius
+    t = dht.readTemperature();
+    
+    Serial.print("Hora: "); 
+    Serial.print(stringTime1);
+    Serial.print("  ");
+    Serial.print("Humidity: "); 
+    Serial.print(h);
+    Serial.print(" %");
+    Serial.print("  ");
+    Serial.print("Temperature: "); 
+    Serial.print(t);
+    Serial.println(" *C");
+    Serial.print("  ");
+    
+    
+    if (dataLog) {           
+          dataLog.print("Hora");
+          dataLog.print(",");
+          dataLog.print(stringTime1);
+          dataLog.print(",");
+          dataLog.print("Temperatura");
+          dataLog.print(",");
+          dataLog.print(t);
+          dataLog.print(",");
+          dataLog.print("Humedad");
+          dataLog.print(",");
+          dataLog.println(t);
+          Serial.print("Sirvio");
+    }// if datolog
+    
+    else {
     Serial.println("error opening datalog.txt");
-  }
- 
+    }
+    
+  
+  dataLog.close(); 
 }//microsd
 
 void  usuario(){

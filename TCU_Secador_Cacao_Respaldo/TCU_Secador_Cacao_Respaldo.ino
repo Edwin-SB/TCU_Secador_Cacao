@@ -1,73 +1,95 @@
-// Real time clock, calendar, temperature, humidity data logger using Arduino, DS3231 and DHT22 sensor
- 
-#include <SPI.h>              // Include SPI library (needed for the SD card)
-#include <SD.h>               // Include SD library
-#include <LiquidCrystal_I2C.h>   // LCD library code
-#include <Wire.h>             // Include Wire library code (needed for I2C protocol devices)
-#include <DHT.h>              // Include DHT library code
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include "RTClib.h"
-// LCD module connections (RS, E, D4, D5, D6, D7)
-LiquidCrystal_I2C lcd(0x27,20,4); 
-#define B1      A1            // Button B1 is connected to Arduino pin A1
-#define B2      A2            // Button B1 is connected to Arduino pin A2
-#define DHTPIN  A3            // DHT22 data pin is connected to Arduino pin A3
- 
-#define DHTTYPE DHT22         // DHT22 sensor is used
-DHT dht(DHTPIN, DHTTYPE);     // Initialize DHT library
- 
-File dataLog;
-boolean sd_ok = 0;
-char temperature[] = " 00.0";
-char humidity[]    = " 00.0 %";
-char Time[]     = "  :  :  ";
-char Calendar[] = "  /  /20  ";
-int Temp, RH;
+#include <LiquidCrystal_I2C.h>
+#include<stdlib.h>
+#include "DHT.h"
+#define DHTPIN 9     // what pin we're connected to
+#define DHTTYPE DHT22   // DHT 22  (AM2302)
+#include <SPI.h>
+#include <SD.h>
+#include <Keypad.h>
 
+DHT dht(DHTPIN, DHTTYPE);
 DateTime now;
 char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
 RTC_DS3231 rtc;
+LiquidCrystal_I2C lcd(0x27,20,4);
 
-void showDate(void);
-void showTime(void);
-void showDay(void); 
- 
-void setup() {
-  //lcd.init();                      // initialize the lcd 
-  // Print a message to the LCD.
-  lcd.backlight();
+const byte ROWS = 4; //four rows
+const byte COLS = 4; //three columns
+const int LED =13;
+const int chipSelect = 10;
+const int BUTTON =A0;
+
+float t,h,f;
+char keys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'*','0','#'}
+};
+byte rowPins[ROWS] = {7, 2, 3, 5}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {6, 8, 4};    //connect to the column pinouts of the keypad
+Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+
+
+
+int BUTTONstate = 0;
+int buttonACTION =0;
+int i,j;
+int k = 0;
+
+int posicion=0;    // necesaria para la clave
+int cursor=5;      // posicion inicial de la clave en el LCD
+int clave=0;       // para el LCD
+int luz=0;         // para el LCD
+int tiempo=0;      // para el LCD
+int ledVerde=11;   // pin para el LED verde
+int ledRojo=12;    // pin para el LED rojo
+int buzzer=10;     // pin altavoz
+int variable;
+
+void setup(){ 
+  
+   lcd.noBacklight();     // apagamos LCD
+      pinMode (ledVerde,OUTPUT);
+      pinMode (ledRojo, OUTPUT);
+      pinMode (buzzer, OUTPUT);
+      digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
+      digitalWrite(ledVerde, LOW); // apagamos el verde
+
+      lcd.setCursor(0,0);     // situamos el cursor el la posición 2 de la linea 0.
+      lcd.print("Introduzca clave"); // escribimos en LCD
+      Serial.print("Introduzca clave"); // escribimos en LCD
+      lcd.setCursor(cursor,1); // cursor en la posicion de la variable, linea 1
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
+  pinMode(BUTTON, INPUT);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Leonardo only
+  }
+
+
   Serial.print("Initializing SD card...");
-  if (!SD.begin())
-    Serial.println("initialization failed!");
-  else {
-    Serial.println("initialization done.");
-    sd_ok = 1;
+  // make sure that the default chip select pin is set to
+  // output, even if you don't use it:
+  pinMode(10, OUTPUT);
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
   }
-  pinMode(B1, INPUT_PULLUP);
-  pinMode(B2, INPUT_PULLUP);
-  lcd.begin(16, 2);                              // Set up the LCD's number of columns and rows
-  Wire.begin();                                  // Join i2c bus
+  Serial.println("card initialized.");
+  
+  Serial.println("DHTxx test!");
+ 
   dht.begin();
+
   
-  lcd.setCursor(0, 0);   lcd.print("TIME:");
-  lcd.setCursor(0, 1);   lcd.print("DATE:");
-  lcd.setCursor(0, 2);   lcd.print("Temp =");
-  lcd.setCursor(11, 2);  lcd.write(223);         // Print degree symbol ( °)
-  lcd.setCursor(12, 2);  lcd.write('C');
-  lcd.setCursor(0, 3);   lcd.print("RH   =");
-  
-  Serial.println("   DATE    |   TIME   | TEMPERATURE | HUMIDITY");
-  
-  if(sd_ok) {                                       // If SD card initialization was OK
-    dataLog = SD.open("Logger.txt", FILE_WRITE);    // Open file Logger.txt
-    if(dataLog) {                                   // if the file opened okay, write to it:
-      dataLog.println("   DATE    ,   TIME   , EMPERATURE , HUMIDITY");
-      dataLog.close();                              // Close the file
-    }
-  }
-  
+  //delay(2000);
   if (! rtc.begin()) 
   {
     Serial.println("Couldn't find RTC Module");
@@ -80,116 +102,208 @@ void setup() {
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-}// setup 
- 
-
-void blink_parameter(){
-  byte j = 0;
-  while(j < 10 && digitalRead(B1) && digitalRead(B2)){
-    j++;
-    delay(25);
-  }
 }
-byte edit(byte x, byte y, byte parameter){
-  char text[3];
-  while(!digitalRead(B1));                        // Wait until button (pin #8) released
-  while(true){
-    while(!digitalRead(B2)){                      // If button (pin #9) is pressed
-      parameter++;
+
+
+void loop(){
+  
+  char pulsacion = keypad.getKey(); // leemos pulsacion
+  now = rtc.now();
+   
+
+  /*switch(pulsacion){ // asterisco para resetear el contador
+  case '*':
+       posicion = 0;
+       cursor = 5;
+       clave=0;
+       posicion=0;
+       lcd.setCursor(0,0); // situamos el cursor el la posición 2 de la linea 0.
+       lcd.print("Introduzca clave"); 
+       Serial.println("Introduzca clave");// escribimos en LCD
+       lcd.setCursor(5,1);
+       lcd.print(" "); // borramos de la pantalla los numeros
+       lcd.setCursor(5,1);
+    
+       digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
+       digitalWrite(ledVerde, LOW); // apagamos el verde
+       break;
+   case '#':
+        variable =1;
+        while( variable ==1){
+         microSD(); // Es la funcion encargada de escribir en la microSD todos los datos 
+          }
+        break;
+    
+    }*/
+
+  
+  usuario();
+  //microSD();
+  
+}//loop
+
+
+void microSD(){
+   
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;}
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  float h = dht.readHumidity();
+  // Read temperature as Celsius
+  float t = dht.readTemperature();
+  // Read temperature as Fahrenheit
+  float f = dht.readTemperature(true);
+  char key = keypad.getKey();// lee lo que se introcice en el teclado
+  delay(2000);
+  String stringTime1 = "";
+  stringTime1 += now.hour();
+  stringTime1 += ":";
+  stringTime1 += now.minute();
+  stringTime1 += ":";
+  stringTime1 += now.second();
+  Serial.print("Hora: "); 
+  Serial.print(stringTime1);
+  Serial.print("  ");
+  Serial.print("Humidity: "); 
+  Serial.print(h);
+  Serial.print(" %");
+  Serial.print("  ");
+  Serial.print("Temperature: "); 
+  Serial.print(t);
+  Serial.println(" *C");
+  Serial.print("  ");
+  
+  String stringUser = "";
+    stringUser += key;
+    stringUser += ".txt";
+  
+   
+    
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  File dataLog = SD.open("final3.txt", FILE_WRITE);
+  
+  // if the file is available, write to it:
+  if (dataLog) {
+        dataLog.print("Hora");
+        dataLog.print(",");
+        dataLog.print(stringTime1);
+        dataLog.print(",");
+        dataLog.print("Temperatura");
+        dataLog.print(",");
+        dataLog.print(t);
+        dataLog.print(",");
+        dataLog.print("Humedad");
+        dataLog.print(",");
+        dataLog.println(t);
+        dataLog.close(); 
+    // print to the serial port too: 
+  }// if datolog
  
-      delay(200);                                // Wait 200ms
+  // if the file isn't open, pop up an error:
+  else {
+    Serial.println("error opening datalog.txt");
+  }
+ 
+}//microsd
+
+void  usuario(){
+  
+  char pulsacion = keypad.getKey(); // leemos pulsacion
+      if (pulsacion != 0) //Si el valor es 0 es que no se ha pulsado ninguna tecla
+        { // descartamos almohadilla y asterisco
+          if (pulsacion != '#' && pulsacion != '*' && clave==0){
+            lcd.print(pulsacion); // imprimimos pulsacion
+             Serial.print(pulsacion);
+             cursor++;             // incrementamos el cursor
+             tone(buzzer,350);     // tono de pulsacion
+             delay(200);
+             noTone(buzzer);
+
+      //--- Condicionales para comprobar la clave introducida -----------
+      // comparamos entrada con cada uno de los digitos, uno a uno
+      
+          posicion ++; // aumentamos posicion si es correcto el digito
+
+      if (posicion == 4)
+       { // comprobamos que se han introducido los 4 correctamente
+         digitalWrite (13,HIGH);  // encendemos LED
+         lcd.setCursor(0,0);      // situamos el cursor el la pos 0 de la linea 0.
+         lcd.print("Usuario Correcto? ");
+         Serial.println("  ");
+         Serial.println("Usuario Correcto? ");// escribimos en LCD
+         Serial.println("SI(#) NO(*)");
+         delay(200);                           // tono de clave correcta
+         tone(buzzer,500);
+         delay(100);
+         noTone(buzzer);
+         tone(buzzer,600);
+         delay(100);
+         noTone(buzzer);
+         tone(buzzer,800);
+         delay(100);
+         noTone(buzzer);
+
+         lcd.setCursor(5,1); // cursor en la posicion 5, linea 1
+         clave=1; // indicamos que se ha introducido la clave
+         digitalWrite(ledRojo,LOW); // apagamos el LED rojo
+         digitalWrite(ledVerde, HIGH); // encendemos el verde
+     }
+     //--- En el caso de que este incompleta o no hayamos acertado ----------
+     if(cursor>8)        // comprobamos que no pase de la cuarta posicion
+       {   cursor=5;     // lo volvemos a colocar al inicio
+           posicion=0;           // borramos clave introducida
+           lcd.setCursor(5,1);
+           lcd.print(" ");       // borramos la clave de la pantalla
+           lcd.setCursor(5,1);
+           if(clave==0)         // comprobamos que no hemos acertado
+              { tone(buzzer,70,500); // para generar
+                delay(250); // tono de error
+                noTone(buzzer);
+              }
+        }
+     }
+   } 
+
+ //--- Condicionales para encender o apagar el LCD --------------
+ if (pulsacion == '#' && luz==0)
+     { // comprobamos tecla y encendemos si esta apagado
+       lcd.backlight(); // encendemos
+       luz=1; // indicamos que esta encendida
+       pulsacion =0; // borramos el valor para poder leer el siguiente condicional
+     }
+
+ if (pulsacion == '#' && luz==1)
+     { // comprobamos tecla y estado
+       lcd.noBacklight(); // apagamos
+       luz=0; // indicamos que esta apagada
+     }
+
+ //--- Condicionales para resetear clave introducida -------------
+ switch(pulsacion){ // asterisco para resetear el contador
+  case '*':
+       posicion = 0;
+       cursor = 5;
+       clave=0;
+       posicion=0;
+       lcd.setCursor(0,0); // situamos el cursor el la posición 2 de la linea 0.
+       lcd.print("Introduzca clave"); 
+       Serial.println("Introduzca clave");// escribimos en LCD
+       lcd.setCursor(5,1);
+       lcd.print(" "); // borramos de la pantalla los numeros
+       lcd.setCursor(5,1);
+    
+       digitalWrite(ledRojo,HIGH); // encendemos el LED rojo
+       digitalWrite(ledVerde, LOW); // apagamos el verde
+       break;
+   case '#':
+        microSD();
+        break;
+    
     }
     
-    if(!digitalRead(B1)){                         // If button (pin #8) is pressed
-                                        // Increament 'i' for the next parameter
-      return parameter;                          // Return parameter value and exit
-    }
-  }
-}
- 
-void loop() {
-  now = rtc.now();
-  if(!digitalRead(B1)){                           // If button (pin #8) is pressed
-                        // Stop transmission and release the I2C bus
-    delay(200);                                 // Wait 200ms
-  }
-   
-                             // Diaplay time & calendar
-  
-  
-    // Read humidity
-    RH = dht.readHumidity() * 10;
-    //Read temperature in degree Celsius
-    Temp = dht.readTemperature() * 10;
-    if(Temp < 0){
-      temperature[0] = '-';                     // If temperature < 0 put minus sign
-      Temp = abs(Temp);                         // Absolute value of 'Temp'
-    }
-    else
-      temperature[0] = ' ';                     // otherwise (temperature > 0) put space
-    temperature[1]   = (Temp / 100) % 10  + 48;
-    temperature[2]   = (Temp / 10)  % 10  + 48;
-    temperature[4]  =  Temp % 10 + 48;
-    if(RH >= 1000)
-      humidity[0]    = '1';                     // If humidity >= 100.0% put '1' of hundreds
-    else
-      humidity[0]    = ' ';                     // otherwise (humidity < 100) put space
-    humidity[1]      = (RH / 100) % 10 + 48;    
-    humidity[2]      = (RH / 10) % 10 + 48;
-    humidity[4]     =  RH % 10 + 48;
-    lcd.setCursor(6, 2);
-    lcd.print(temperature);
-    lcd.setCursor(6, 3);
-    lcd.print(humidity);
-    // Send data to Arduino IDE serial monitor
-    Serial.print(Calendar);
-    Serial.print(" | ");
-    Serial.print(Time);
-    Serial.print(" |   ");
-    Serial.print(temperature);
-    Serial.print("°C   |  ");
-    Serial.println(humidity);
-    if(sd_ok) {                                       // If SD card initialization was OK
-      dataLog = SD.open("Logger.txt", FILE_WRITE);    // Open file Logger.txt
-      if(dataLog) {                                   // if the file opened okay, write to it:
-        dataLog.print(Calendar);
-        dataLog.print(",");
-        dataLog.print(Time);
-        dataLog.print(",");
-        dataLog.print(temperature);
-        dataLog.print(",");
-        dataLog.println(humidity);
-        dataLog.close();                              // Close the file
-      }
-    }
-  
-  delay(50);                                          // Wait 50ms
-}
-
-void showDate()
- {
-  lcd.setCursor(0,0);
-  lcd.print(now.day());
-  lcd.print('/');
-  lcd.print(now.month());
-  lcd.print('/');
-  lcd.print(now.year());
- }
- void showDay()
- {
-  lcd.setCursor(11,0);
-  lcd.print(daysOfTheWeek[now.dayOfTheWeek()]);
- }
- void showTime()
- {
-  lcd.setCursor(0,1);
-  lcd.print("Time:");
-  lcd.print(now.hour());
-  lcd.print(':');
-  lcd.print(now.minute());
-  lcd.print(':');
-  lcd.print(now.second());
-  lcd.print("    ");
- } 
-
- 
+    
+  }//usuario
