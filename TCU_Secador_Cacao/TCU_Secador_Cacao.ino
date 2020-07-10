@@ -106,7 +106,10 @@ void setup(){
 
 
 void loop(){
-
+  
+  String stringUser = "";
+    stringUser += Lastkey;
+    stringUser += ".csv"; 
   Lastkey = keypad.getKey(); // leemos pulsacion
   //Serial.println(Lastkey);
   if(Lastkey !=NO_KEY){
@@ -141,17 +144,13 @@ void loop(){
   
 
     
-/*
-  String stringUser = "";
-    stringUser += Lastkey;
-    stringUser += ".csv"; */
+
     
 }//loop
 
 
 void microSD(){
   
-   
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f)) {
     Serial.println("Failed to read from DHT sensor!");
